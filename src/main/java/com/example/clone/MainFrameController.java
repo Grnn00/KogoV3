@@ -1,6 +1,8 @@
 package com.example.clone;
 
 
+import javafx.application.Platform;
+import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -13,12 +15,11 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.net.URL;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Optional;
+import java.util.*;
+
+import static com.example.clone.Friend.Perdita;
 
 public class MainFrameController {
 
@@ -47,10 +48,10 @@ public class MainFrameController {
     private Label FormLabel;
 
     @FXML
-    protected ComboBox<String> FriendsBox=new ComboBox<>();
+    protected ComboBox<String> FriendsBox=new ComboBox<String>();
 
     @FXML
-    private ImageView gifView = new ImageView();
+    private final ImageView gifView = new ImageView();
 
     @FXML
     private Label GifLabel;
@@ -59,19 +60,38 @@ public class MainFrameController {
     private AnchorPane Pane;
 
     @FXML
-    private Label DateLabel;
+    protected Label DateLabel;
 
-    private Calendar date;
-    Friend amico = new Friend();
+    private final Calendar date=new GregorianCalendar(2020,0,1);
+    //Friend amico = new Friend();
     Kogo kogo = new Kogo();
     ObservableList<String> names;
     ArrayList<Friend> amici = new ArrayList<Friend>();
-    private File saves =new File("saves.csv");
+    private final File saves =new File("saves.csv");
     private static final DecimalFormat df = new DecimalFormat("0.00");
 
     @FXML
     void HangButtonListner(ActionEvent event) {
+        //playAndResizeGIF("/gif1.gif",200,500);
 
+        // qua si chiama la funzione per rubare e per farlo devo reperire il ogetto del amico il cui nominativo e preso dal item selezionato nella combo box
+        // al momento del click sull pulsasnte
+        try {
+            Friend selectedFriend = FindAmico(FriendsBox.getSelectionModel().getSelectedItem());
+            if (selectedFriend != null) {
+                kogo.Rubare(Friend.Perdita(selectedFriend));
+                BalanceControll(selectedFriend);
+            } else {
+                System.out.println("Nessun amico trovato per il nome selezionato.");
+            }
+
+        } catch (IOException e1) {
+            e1.printStackTrace();
+        }
+        LabelUpdate(balanceLabel,df.format(kogo.getMoney())+"$");
+        LabelUpdate(FormLabel, kogo.getForm());
+
+        ChangeData(1);
     }
 
     @FXML
@@ -96,29 +116,32 @@ public class MainFrameController {
 
     @FXML
     void FriendsBoxListener(ActionEvent event) throws IOException {
+        if (FriendsBox.isDisable()) return; // Se è disabilitato, non fare nulla
+        System.out.println("ComboBoxListener attivato! Selezione: " + FriendsBox.getSelectionModel().getSelectedItem());
 
-        if(FriendsBox.getItems().isEmpty()){
-            try {
-                AddItems(FriendsBox);
-                ArrayAmici();
-                FriendsBox.getSelectionModel().select(1);
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            }
-        }
-        // Get the selected item
-
-        int i =FriendsBox.getItems().size();
-        System.out.println("Size: "+ i);
-        System.out.println("Selected ;"+FriendsBox.getSelectionModel().getSelectedIndex());
-        System.out.println("Amico Sel: " +FriendsBox.getSelectionModel().getSelectedItem()); //
-
-        //controlla se si seleziona aggiungi e solo in quel caso fa fare il inserimento
-        if( FriendsBox.getSelectionModel().getSelectedIndex() == i-1) {
-            InputDialog("Aggiungi Amico", "Nome Cognome", "Nome: ");
-            FriendsBox.getItems().clear();
+        if (FriendsBox.getItems().isEmpty()) {
             AddItems(FriendsBox);
             ArrayAmici();
+        }
+
+        // Get the selected item
+        int i =FriendsBox.getItems().size();
+        System.out.println("Size: "+ i);
+        System.out.println("Selected :"+FriendsBox.getSelectionModel().getSelectedIndex());
+        System.out.println("Amico Sel: " +FriendsBox.getSelectionModel().getSelectedItem());
+
+        //controlla se si seleziona aggiungi e solo in quel caso fa fare il inserimento
+        if( FriendsBox.getSelectionModel().getSelectedItem().equals("Aggiungi")) {
+            InputDialog("Aggiungi Amico", "Nome Cognome", "Nome: ");
+            FriendsBox.setDisable(true); // Disattiva il listener momentaneamente
+            AddItems(FriendsBox);
+            FriendsBox.setDisable(false);
+            System.out.println("Elementi nella ComboBox:");
+            for (String item : FriendsBox.getItems()) {
+                System.out.println(item);
+            }
+
+            Platform.runLater(() -> FriendsBox.getSelectionModel().clearSelection());
         }
     }
 
@@ -160,45 +183,73 @@ public class MainFrameController {
         }
     }
 
-    public void ArrayAmici() throws IOException{
-        File file = new File("Friends.txt");
+    public void ArrayAmici() throws IOException {
+        File file = new File("Friends.csv");
+
+        if (!file.exists()) {
+            System.out.println("Il file Friends.csv non esiste.");
+            return;
+        }
+
         BufferedReader br = new BufferedReader(new FileReader(file));
         String line;
-        int i=0;
-        BigDecimal n;
+        int i = 0;
         amici.clear();
+
         while ((line = br.readLine()) != null) {
             i++;
-            if(i!=1){
-                String s[]= line.split("\t\t");
-                Friend a = new Friend(s[0],s[1]);
-                a.setSex(s[2]);
-                a.setHobby(s[3]);
-                n= new BigDecimal(Float.parseFloat(s[4].replace(",",".")));
-                //n.setScale(2, RoundingMode.HALF_UP);
-                //System.out.println(n.floatValue());
-                a.setBalance(n.floatValue());
+            if (i == 1) continue; // Salta l'intestazione
 
-                amici.add(a);
+            String[] s = line.split(",");
+
+            if (s.length < 5) {
+                System.out.println("Errore: Riga non valida -> " + line);
+                continue;
             }
 
+            try {
+                Friend a = new Friend(s[0], s[1], s[2], s[3], s[4]);
+
+                amici.add(a);
+            } catch (NumberFormatException e) {
+                System.out.println("Errore nel parsing del saldo: " + line);
+            }
+        }
+        br.close();
+    }
+
+
+
+    public void AddItems(ComboBox<String> cb) {
+        try {
+            if (names == null) {
+                names = FXCollections.observableArrayList();
+            }
+            names.clear();
+
+            List<String> retrievedNames = Friend.getNames();
+            if (retrievedNames != null) {
+                names.addAll(retrievedNames);
+            }
+            names.add("Aggiungi");
+
+            // Salva la selezione attuale
+            String selected = cb.getSelectionModel().getSelectedItem();
+
+            cb.getItems().setAll(names); // Usa `setAll` invece di `clear` + `addAll`
+
+            // Ripristina la selezione attuale se ancora presente
+            if (names.contains(selected)) {
+                cb.getSelectionModel().select(selected);
+            } else {
+                cb.getSelectionModel().clearSelection();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
-    public void AddItems(ComboBox<String> cb) throws IOException{
 
-        //names = amico.getNames();
-        // names.add("Aggiungi");
-
-        names.clear();
-        names = amico.getNames();
-        names.add("Aggiungi");
-
-        cb.getItems().clear();
-        cb.getItems().addAll(names);
-
-
-    }
 
     public void ShowInfo(String title, String message){
 
@@ -210,7 +261,7 @@ public class MainFrameController {
 
     }
 
-    public void InputDialog(String title, String description,String name){
+    public void InputDialog(String title, String description,String name) throws IOException {
 
         TextInputDialog dialog = new TextInputDialog();
         dialog.setTitle(title);
@@ -227,11 +278,34 @@ public class MainFrameController {
             Surname=str.substring(space1).trim();
             Friend a = new Friend(Name,Surname);
             a.AddToFile(a,true);
+            amici.add(a);
             String message =a.getName()+" "+a.getSurname()+"\n E interessato a: " + a.getHobby();
             ShowInfo("Amico", message);
 
         }
-
+        System.out.println("salvo Input");
     }
 
-}
+    // Search for the friend in the combo box and return the object from the array
+    public Friend FindAmico(String s){
+        if (amici.isEmpty()) {
+            return null;
+        }
+        Friend b = amici.get(0);
+
+        for(Friend a :amici){
+            if( s.contains(a.getSurname()) && s.contains(a.getName())){
+                b=a;
+            }
+        }
+        return b;
+    }
+    //Controls the balance of the friend and does the delete or the update of the friend on file
+    public void BalanceControll(Friend a) throws IOException {
+        if(a.getBalance()>0)
+            a.Update(a);
+        else
+            a.DeleteFromFile(a);
+    }
+
+    }

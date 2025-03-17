@@ -15,8 +15,8 @@ public class Friend {
     private float balance;
     private BigDecimal n;   //variabile per formattare il valore in "balance"
     private String sex;      String[] s={"M","F"};
-    Random rand = new Random();
-    File file = new File("Friends.txt");
+    static Random rand = new Random();
+    static File file = new File("Friends.csv");
 
     String[] hobbies = {
             "Sport",
@@ -44,13 +44,12 @@ public class Friend {
 
     }
 
-    Friend(String Name, String Surname,String sesso, String hobby,float balance){
+    Friend(String Name, String Surname,String sesso, String hobby,String balance){
         this.Name = Name;
         this.Surname = Surname;
         this.sex = sesso;
         this.hobby = hobby;
-        this.n= new BigDecimal(balance);
-        this.balance=Float.parseFloat(df.format(this.n));
+        this.balance=Float.parseFloat(balance);
         System.out.println("amico creato sus");
     }
 
@@ -63,7 +62,7 @@ public class Friend {
     }
 
 
-    public float getBalance() {
+    public  float getBalance() {
         return balance;
     }
     public void setBalance(float Balance) {
@@ -99,7 +98,7 @@ public class Friend {
 
 
     // genero un numero da sotrarre dalla persona e settare il nuovo Balancel il return serve solo per far avere il valore alla classe kogo
-    public float Perdita(Friend a) throws IOException {
+    static float Perdita(Friend a) throws IOException {
         float f,r,s= rand.nextFloat() *50;
         r=a.getBalance()-s;
         if(r >=0 ){
@@ -117,30 +116,32 @@ public class Friend {
     }
 
     // aggiunge un amico nel apposito file
-    public void AddToFile(Friend am,Boolean condition) {
-        try(BufferedReader br = new BufferedReader(new FileReader(file));
-            FileWriter fil = new FileWriter("Friends.txt",condition);
-            BufferedWriter bf = new BufferedWriter(fil);
-            PrintWriter wr = new PrintWriter(bf);)  {
-            if(!file.exists())
-                file.createNewFile();
+    static void AddToFile(Friend am, boolean append) {
 
-            if(br.readLine()==null)
-                wr.printf("Name\t\tSurname\t\tSex\t\tHobby\t\tBalance\n");
+        try (FileWriter fil = new FileWriter(file, append);
+             BufferedWriter bf = new BufferedWriter(fil);
+             PrintWriter wr = new PrintWriter(bf)) {
 
-            wr.printf("%s\t\t%s\t\t%s\t\t%s\t\t%.2f\n", am.getName(), am.getSurname(),am.getSex (), am.getHobby(), am.getBalance());
+            if (file.length()==0) {
+
+                wr.println("Name,Surname,Sex,Hobby,Balance"); // Intestazione
+            }
+
+            wr.printf(Locale.US,"%s,%s,%s,%s,%.2f\n", am.getName(), am.getSurname(), am.getSex(), am.getHobby(), am.getBalance());
 
         } catch (Exception e) {
-            System.out.println("dio porco"  + e);
+            System.out.println("Errore nella scrittura del file: " + e.getMessage());
         }
     }
 
+
     //elimina un amico dalla lista e dal file
-    public void DeleteFromFile(Friend am) throws IOException{
-        File tempFile = new File("temp.txt");
+    static void DeleteFromFile(Friend am) throws IOException{
+        File tempFile = new File("temp.csv");
+
 
         try( BufferedReader br = new BufferedReader(new FileReader(file));
-             FileWriter fil = new FileWriter("temp.txt",false);
+             FileWriter fil = new FileWriter("temp.csv",false);
              BufferedWriter bf = new BufferedWriter(fil);
              PrintWriter wr = new PrintWriter(bf);)  {
             if(!file.exists())
@@ -157,7 +158,7 @@ public class Friend {
         }
 
         try( BufferedReader br = new BufferedReader(new FileReader(tempFile));
-             FileWriter fil = new FileWriter("Friends.txt",false);
+             FileWriter fil = new FileWriter("Friends.csv",false);
              BufferedWriter bf = new BufferedWriter(fil);
              PrintWriter wr = new PrintWriter(bf);){
 
@@ -168,79 +169,97 @@ public class Friend {
                 wr.println(line);
             }
         }
-        tempFile.delete();
+        //tempFile.delete();
 
     }
 
 
     // va a modificare il valore saldo di un certo amico e riscrive il file modificato
     // sarebbe meglio tenere conto delle modifiche fatte e tenere un file che tiene il log delle azioni fatte
-    public void Update(Friend am) throws IOException {
+    static void Update(Friend am) throws IOException {
+        File tempFile = new File("temp.csv");
 
-        File tempFile = new File("temp.txt");
+        // Verifica che il file originale esista prima di leggerlo
+        if (!file.exists()) {
+            System.out.println("Il file originale non esiste!");
+            return;
+        }
 
-        try( BufferedReader br = new BufferedReader(new FileReader(file));
-             FileWriter fil = new FileWriter("temp.txt",false);
-             BufferedWriter bf = new BufferedWriter(fil);
-             PrintWriter wr = new PrintWriter(bf);)  {
-            if(!file.exists())
-                file.createNewFile();
+        boolean modificato = false; // Flag per vedere se abbiamo fatto una modifica
+
+        try (BufferedReader br = new BufferedReader(new FileReader(file));
+             BufferedWriter bw = new BufferedWriter(new FileWriter(tempFile))) {
+
             String line;
             while ((line = br.readLine()) != null) {
-                // Modifica la riga di testo
-                if(line.contains(am.getSurname()) && line.contains(am.getName())){
-                    // Scrivi la riga di testo modificata sul file
-                    wr.printf("%s\t\t%s\t\t%s\t\t%s\t\t%.2f\n", am.getName(),am.getSurname(),am.getSex(),am.getHobby(),am.getBalance());
-
+                // Controlla se la riga corrisponde all'amico da modificare
+                if (line.contains(am.getSurname()) && line.contains(am.getName())) {
+                    // Scrivi la riga modificata nel file temporaneo
+                    bw.write(String.format(Locale.US,"%s,%s,%s,%s,%.2f\n",
+                            am.getName(), am.getSurname(), am.getSex(), am.getHobby(), am.getBalance()));
+                    modificato = true;
+                } else {
+                    // Scrivi la riga originale
+                    bw.write(line + System.lineSeparator());
                 }
-                else
-                    wr.println(line);
             }
         }
 
-        try( BufferedReader br = new BufferedReader(new FileReader(tempFile));
-             FileWriter fil = new FileWriter("Friends.txt",false);
-             BufferedWriter bf = new BufferedWriter(fil);
-             PrintWriter wr = new PrintWriter(bf);){
+        if (!modificato) {
+            System.out.println("Nessun amico trovato con il nome e cognome specificati.");
+            return; // Non serve sovrascrivere il file se nulla è cambiato
+        }
 
-            if(!file.exists())
-                file.createNewFile();
+        // Sovrascrivi il file originale con il file temporaneo
+        try (BufferedReader br = new BufferedReader(new FileReader(tempFile));
+             BufferedWriter bw = new BufferedWriter(new FileWriter(file))) {
+
             String line;
             while ((line = br.readLine()) != null) {
-                wr.println(line);
+                bw.write(line + System.lineSeparator());
             }
         }
-        tempFile.delete();
+
+        // Cancella il file temporaneo dopo la copia
+        if (!tempFile.delete()) {
+            System.out.println("Impossibile eliminare il file temporaneo.");
+        } else {
+            System.out.println("File aggiornato con successo!");
+        }
     }
 
-    public void CleanFile() throws IOException{
+
+    static void CleanFile() throws IOException{
         try(
-                FileWriter fil = new FileWriter("Friends.txt",false);){
+                FileWriter fil = new FileWriter("Friends.csv",false);){
             fil.close();
         }
     }
 
-    public ObservableList<String> getNames() throws IOException{
-        ObservableList<String> names = FXCollections.observableArrayList();
+    static ObservableList<String> getNames() throws IOException {
+        File file = new File("Friends.csv");
 
+        ObservableList<String> names = FXCollections.observableArrayList();
         BufferedReader br = new BufferedReader(new FileReader(file));
 
-        String line,n,c,res;
-        int i=0;
+        String line;
+        int i = 0;
         while ((line = br.readLine()) != null) {
             i++;
-            String s[]= line.split("\t\t");
+            String[] s = line.split(",");
 
-            n = s[0];
-            c = s[1];
-            res=n+" "+c;
-            //System.out.println("S: "+res );
-            if(i!=1){
-                names.add(res);
+            if (s.length >= 2) {
+                String res = s[0] + " " + s[1];
+                if (i != 1) { // Salta l'intestazione
+                    names.add(res);
+                }
+            } else {
+                System.out.println("Errore nel file: Riga non valida -> " + line);
             }
         }
         br.close();
         return names;
     }
+
 
 }

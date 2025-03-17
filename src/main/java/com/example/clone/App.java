@@ -18,6 +18,7 @@ public class App extends Application {
             MainFrameController controller = loader.getController();
 // Imposta il valore della ComboBox dopo il caricamento
             controller.FriendsBox.getItems().add("Aggiungi");
+            controller.LabelUpdate(controller.DateLabel,"1/1/2020");
 
             primaryStage.setTitle("JavaFX App");
             primaryStage.setScene(new Scene(root, 800, 600));
