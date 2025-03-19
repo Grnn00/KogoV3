@@ -16,7 +16,6 @@ public class Friend {
     private BigDecimal n;   //variabile per formattare il valore in "balance"
     private String sex;      String[] s={"M","F"};
     static Random rand = new Random();
-    static File file = new File("Friends.csv");
 
     String[] hobbies = {
             "Sport",
@@ -90,26 +89,26 @@ public class Friend {
     }
 
     public void ToStampa(){
-        System.out.println("Name: "+Name);
-        System.out.println("Surname: "+ Surname);
-        System.out.println("Hobby: "+hobby);
-        System.out.println("Balance: "+balance);
+        System.out.println("Name: "+this.Name);
+        System.out.println("Surname: "+ this.Surname);
+        System.out.println("Hobby: "+this.hobby);
+        System.out.println("Balance: "+this.balance);
     }
 
 
     // genero un numero da sotrarre dalla persona e settare il nuovo Balancel il return serve solo per far avere il valore alla classe kogo
     static float Perdita(Friend a) throws IOException {
-        float f,r,s= rand.nextFloat() *50;
-        r=a.getBalance()-s;
+        float s= rand.nextFloat() *50;
+        float r=(a.getBalance())-s;
         if(r >=0 ){
             a.setBalance(r);
             return s;
         }
         // qua sarebbe figo se a dipendere da quanto va in negativo succedono diverse reazioni dell amico come    rissa denuncia o robe cosi
         else{
-            f=a.getBalance();
+          // float f=a.getBalance();
             a.setBalance(0);
-            return f;
+            return 0;
         }
 
 
@@ -117,6 +116,7 @@ public class Friend {
 
     // aggiunge un amico nel apposito file
     static void AddToFile(Friend am, boolean append) {
+        File file = new File("Friends.csv");
 
         try (FileWriter fil = new FileWriter(file, append);
              BufferedWriter bf = new BufferedWriter(fil);
@@ -138,6 +138,7 @@ public class Friend {
     //elimina un amico dalla lista e dal file
     static void DeleteFromFile(Friend am) throws IOException{
         File tempFile = new File("temp.csv");
+        File file = new File("Friends.csv");
 
 
         try( BufferedReader br = new BufferedReader(new FileReader(file));
@@ -176,57 +177,49 @@ public class Friend {
 
     // va a modificare il valore saldo di un certo amico e riscrive il file modificato
     // sarebbe meglio tenere conto delle modifiche fatte e tenere un file che tiene il log delle azioni fatte
-    static void Update(Friend am) throws IOException {
+    public void Update(Friend am) throws IOException {
+        File file = new File("Friends.csv");
         File tempFile = new File("temp.csv");
 
-        // Verifica che il file originale esista prima di leggerlo
         if (!file.exists()) {
             System.out.println("Il file originale non esiste!");
             return;
         }
 
-        boolean modificato = false; // Flag per vedere se abbiamo fatto una modifica
+        boolean modificato = false;
 
         try (BufferedReader br = new BufferedReader(new FileReader(file));
              BufferedWriter bw = new BufferedWriter(new FileWriter(tempFile))) {
 
             String line;
             while ((line = br.readLine()) != null) {
-                // Controlla se la riga corrisponde all'amico da modificare
-                if (line.contains(am.getSurname()) && line.contains(am.getName())) {
-                    // Scrivi la riga modificata nel file temporaneo
-                    bw.write(String.format(Locale.US,"%s,%s,%s,%s,%.2f\n",
+                String[] s = line.split(",");
+
+                // Se la riga corrisponde all'amico da aggiornare
+                if (s.length == 5 && s[0].equals(am.getName()) && s[1].equals(am.getSurname())) {
+                    bw.write(String.format(Locale.US, "%s,%s,%s,%s,%.2f\n",
                             am.getName(), am.getSurname(), am.getSex(), am.getHobby(), am.getBalance()));
                     modificato = true;
                 } else {
-                    // Scrivi la riga originale
-                    bw.write(line + System.lineSeparator());
+                    bw.write(line + "\n");
                 }
             }
         }
 
         if (!modificato) {
-            System.out.println("Nessun amico trovato con il nome e cognome specificati.");
-            return; // Non serve sovrascrivere il file se nulla è cambiato
+            System.out.println("Nessun amico trovato per l'aggiornamento.");
         }
 
-        // Sovrascrivi il file originale con il file temporaneo
-        try (BufferedReader br = new BufferedReader(new FileReader(tempFile));
-             BufferedWriter bw = new BufferedWriter(new FileWriter(file))) {
-
-            String line;
-            while ((line = br.readLine()) != null) {
-                bw.write(line + System.lineSeparator());
-            }
+        // Sostituisci il file originale con quello aggiornato
+        if (!file.delete()) {
+            System.out.println("Errore nella cancellazione del file originale.");
+            return;
         }
-
-        // Cancella il file temporaneo dopo la copia
-        if (!tempFile.delete()) {
-            System.out.println("Impossibile eliminare il file temporaneo.");
-        } else {
-            System.out.println("File aggiornato con successo!");
+        if (!tempFile.renameTo(file)) {
+            System.out.println("Errore nel rinominare il file temporaneo.");
         }
     }
+
 
 
     static void CleanFile() throws IOException{

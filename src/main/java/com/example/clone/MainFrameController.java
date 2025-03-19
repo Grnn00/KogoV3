@@ -1,7 +1,6 @@
 package com.example.clone;
 
 
-import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -66,7 +65,7 @@ public class MainFrameController {
     //Friend amico = new Friend();
     Kogo kogo = new Kogo();
     ObservableList<String> names;
-    ArrayList<Friend> amici = new ArrayList<Friend>();
+    ArrayList<Friend> friendArrayList = new ArrayList<Friend>();
     private final File saves =new File("saves.csv");
     private static final DecimalFormat df = new DecimalFormat("0.00");
 
@@ -79,7 +78,7 @@ public class MainFrameController {
         try {
             Friend selectedFriend = FindAmico(FriendsBox.getSelectionModel().getSelectedItem());
             if (selectedFriend != null) {
-                kogo.Rubare(Friend.Perdita(selectedFriend));
+                kogo.Rubare(Perdita(selectedFriend));
                 BalanceControll(selectedFriend);
             } else {
                 System.out.println("Nessun amico trovato per il nome selezionato.");
@@ -121,7 +120,7 @@ public class MainFrameController {
 
         if (FriendsBox.getItems().isEmpty()) {
             AddItems(FriendsBox);
-            ArrayAmici();
+            ArrayFriends();
         }
 
         // Get the selected item
@@ -135,13 +134,14 @@ public class MainFrameController {
             InputDialog("Aggiungi Amico", "Nome Cognome", "Nome: ");
             FriendsBox.setDisable(true); // Disattiva il listener momentaneamente
             AddItems(FriendsBox);
+            ArrayFriends();
             FriendsBox.setDisable(false);
-            System.out.println("Elementi nella ComboBox:");
+            /*System.out.println("Elementi nella ComboBox:");
             for (String item : FriendsBox.getItems()) {
                 System.out.println(item);
             }
-
-            Platform.runLater(() -> FriendsBox.getSelectionModel().clearSelection());
+            */
+            //Platform.runLater(() -> FriendsBox.getSelectionModel().clearSelection());
         }
     }
 
@@ -183,7 +183,7 @@ public class MainFrameController {
         }
     }
 
-    public void ArrayAmici() throws IOException {
+    public void ArrayFriends() throws IOException {
         File file = new File("Friends.csv");
 
         if (!file.exists()) {
@@ -194,7 +194,7 @@ public class MainFrameController {
         BufferedReader br = new BufferedReader(new FileReader(file));
         String line;
         int i = 0;
-        amici.clear();
+        friendArrayList.clear();
 
         while ((line = br.readLine()) != null) {
             i++;
@@ -210,12 +210,17 @@ public class MainFrameController {
             try {
                 Friend a = new Friend(s[0], s[1], s[2], s[3], s[4]);
 
-                amici.add(a);
+                friendArrayList.add(a);
             } catch (NumberFormatException e) {
                 System.out.println("Errore nel parsing del saldo: " + line);
             }
         }
         br.close();
+        // **Verifichiamo se tutti gli amici sono stati caricati**
+        System.out.println("Amici caricati: " + friendArrayList.size());
+        for (Friend f : friendArrayList) {
+            System.out.println(f.getName() + " " + f.getSurname() + " - Balance: " + f.getBalance());
+        }
     }
 
 
@@ -258,7 +263,7 @@ public class MainFrameController {
         alert.setHeaderText("This is an information dialog.");
         alert.setContentText(message);
         alert.showAndWait();
-
+        FriendsBox.getSelectionModel().select(0);
     }
 
     public void InputDialog(String title, String description,String name) throws IOException {
@@ -278,7 +283,7 @@ public class MainFrameController {
             Surname=str.substring(space1).trim();
             Friend a = new Friend(Name,Surname);
             a.AddToFile(a,true);
-            amici.add(a);
+            friendArrayList.add(a);
             String message =a.getName()+" "+a.getSurname()+"\n E interessato a: " + a.getHobby();
             ShowInfo("Amico", message);
 
@@ -287,25 +292,27 @@ public class MainFrameController {
     }
 
     // Search for the friend in the combo box and return the object from the array
-    public Friend FindAmico(String s){
-        if (amici.isEmpty()) {
-            return null;
-        }
-        Friend b = amici.get(0);
-
-        for(Friend a :amici){
-            if( s.contains(a.getSurname()) && s.contains(a.getName())){
-                b=a;
+    public Friend FindAmico(String nomeCompleto) {
+        for (Friend a : friendArrayList) {
+            String fullName = a.getName() + " " + a.getSurname();
+            System.out.println();
+            a.ToStampa();
+            if (fullName.equals(nomeCompleto)) {
+                return a;
             }
         }
-        return b;
+        return null; // Se non lo trova
     }
+
     //Controls the balance of the friend and does the delete or the update of the friend on file
     public void BalanceControll(Friend a) throws IOException {
         if(a.getBalance()>0)
             a.Update(a);
-        else
+        else{
+            friendArrayList.remove(a);
             a.DeleteFromFile(a);
+            AddItems(FriendsBox);
+        }
     }
 
     }
