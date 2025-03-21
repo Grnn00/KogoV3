@@ -95,11 +95,19 @@ public class MainFrameController {
 
     @FXML
     void GymButtonListner(ActionEvent event) {
-
+        String giorn=InputDialogGym("Palestra", "Quanti giorni passi in palestra?");
+        int g=Integer.parseInt(giorn);
+        ChangeData(g);
+        kogo.Spendere((float) 5*g);
+        LabelUpdate(balanceLabel,df.format(kogo.getMoney())+"$");
     }
+
+
 
     @FXML
     void ShopButtonListener(ActionEvent event) {
+        kogo.Spendere((float)50);
+        LabelUpdate(balanceLabel, df.format(kogo.getMoney())+"$");
 
     }
 
@@ -131,7 +139,7 @@ public class MainFrameController {
 
         //controlla se si seleziona aggiungi e solo in quel caso fa fare il inserimento
         if( FriendsBox.getSelectionModel().getSelectedItem().equals("Aggiungi")) {
-            InputDialog("Aggiungi Amico", "Nome Cognome", "Nome: ");
+            InputDialogFriend("Aggiungi Amico", "Nome Cognome", "Nome: ");
             FriendsBox.setDisable(true); // Disattiva il listener momentaneamente
             AddItems(FriendsBox);
             ArrayFriends();
@@ -266,7 +274,7 @@ public class MainFrameController {
         FriendsBox.getSelectionModel().select(0);
     }
 
-    public void InputDialog(String title, String description,String name) throws IOException {
+    public void InputDialogFriend(String title, String description,String name) throws IOException {
 
         TextInputDialog dialog = new TextInputDialog();
         dialog.setTitle(title);
@@ -289,6 +297,18 @@ public class MainFrameController {
 
         }
         System.out.println("salvo Input");
+    }
+
+    private String InputDialogGym(String title, String description) {
+        TextInputDialog dialog = new TextInputDialog();
+        dialog.setTitle(title);
+        dialog.setHeaderText(description);
+        dialog.setContentText("Days:");
+        Optional<String> result = dialog.showAndWait();
+        if(result.isPresent())
+            return result.get();
+        else
+            return "";
     }
 
     // Search for the friend in the combo box and return the object from the array
