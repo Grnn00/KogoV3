@@ -8,6 +8,8 @@ import javafx.stage.Stage;
 
 import java.util.Objects;
 
+import static com.example.clone.Friend.Update;
+
 public class App extends Application {
 
     @Override
@@ -23,6 +25,12 @@ public class App extends Application {
             primaryStage.setTitle("JavaFX App");
             primaryStage.setScene(new Scene(root, 800, 600));
             primaryStage.show();
+
+            // **Gestiamo l'evento di chiusura**
+            primaryStage.setOnCloseRequest(event -> {
+                System.out.println("Chiusura rilevata, salvando dati...");
+                controller.UpdateFile();
+            });
         } catch (Exception e) {
             e.printStackTrace();
         }

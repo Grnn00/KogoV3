@@ -7,6 +7,7 @@ import java.io.*;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Random;
 
@@ -107,8 +108,9 @@ public class Friend {
         // qua sarebbe figo se a dipendere da quanto va in negativo succedono diverse reazioni dell amico come    rissa denuncia o robe cosi
         else{
           // float f=a.getBalance();
+            r=a.getBalance();
             a.setBalance(0);
-            return 0;
+            return r;
         }
 
 
@@ -177,49 +179,26 @@ public class Friend {
 
     // va a modificare il valore saldo di un certo amico e riscrive il file modificato
     // sarebbe meglio tenere conto delle modifiche fatte e tenere un file che tiene il log delle azioni fatte
-    public void Update(Friend am) throws IOException {
+    static void Update(ArrayList<Friend> af) throws IOException {
         File file = new File("Friends.csv");
-        File tempFile = new File("temp.csv");
 
-        if (!file.exists()) {
-            System.out.println("Il file originale non esiste!");
-            return;
-        }
+        try (FileWriter fil = new FileWriter(file, false);
+             BufferedWriter bf = new BufferedWriter(fil);
+             PrintWriter wr = new PrintWriter(bf)) {
 
-        boolean modificato = false;
+            if (file.length()==0) {
 
-        try (BufferedReader br = new BufferedReader(new FileReader(file));
-             BufferedWriter bw = new BufferedWriter(new FileWriter(tempFile))) {
-
-            String line;
-            while ((line = br.readLine()) != null) {
-                String[] s = line.split(",");
-
-                // Se la riga corrisponde all'amico da aggiornare
-                if (s.length == 5 && s[0].equals(am.getName()) && s[1].equals(am.getSurname())) {
-                    bw.write(String.format(Locale.US, "%s,%s,%s,%s,%.2f\n",
-                            am.getName(), am.getSurname(), am.getSex(), am.getHobby(), am.getBalance()));
-                    modificato = true;
-                } else {
-                    bw.write(line + "\n");
-                }
+                wr.println("Name,Surname,Sex,Hobby,Balance"); // Intestazione
             }
+            for(Friend am : af) {
+                wr.printf(Locale.US, "%s,%s,%s,%s,%.2f\n", am.getName(), am.getSurname(), am.getSex(), am.getHobby(), am.getBalance());
+            }
+
+        } catch (Exception e) {
+            System.out.println("Errore nella scrittura del file: " + e.getMessage());
         }
 
-        if (!modificato) {
-            System.out.println("Nessun amico trovato per l'aggiornamento.");
-        }
-
-        // Sostituisci il file originale con quello aggiornato
-        if (!file.delete()) {
-            System.out.println("Errore nella cancellazione del file originale.");
-            return;
-        }
-        if (!tempFile.renameTo(file)) {
-            System.out.println("Errore nel rinominare il file temporaneo.");
-        }
     }
-
 
 
     static void CleanFile() throws IOException{
@@ -227,31 +206,6 @@ public class Friend {
                 FileWriter fil = new FileWriter("Friends.csv",false);){
             fil.close();
         }
-    }
-
-    static ObservableList<String> getNames() throws IOException {
-        File file = new File("Friends.csv");
-
-        ObservableList<String> names = FXCollections.observableArrayList();
-        BufferedReader br = new BufferedReader(new FileReader(file));
-
-        String line;
-        int i = 0;
-        while ((line = br.readLine()) != null) {
-            i++;
-            String[] s = line.split(",");
-
-            if (s.length >= 2) {
-                String res = s[0] + " " + s[1];
-                if (i != 1) { // Salta l'intestazione
-                    names.add(res);
-                }
-            } else {
-                System.out.println("Errore nel file: Riga non valida -> " + line);
-            }
-        }
-        br.close();
-        return names;
     }
 
 

@@ -10,10 +10,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.AnchorPane;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.net.URL;
 import java.text.DecimalFormat;
 import java.util.*;
@@ -77,9 +74,12 @@ public class MainFrameController {
         // al momento del click sull pulsasnte
         try {
             Friend selectedFriend = FindAmico(FriendsBox.getSelectionModel().getSelectedItem());
+
             if (selectedFriend != null) {
+                //System.out.println("Prima "+selectedFriend.getBalance());
                 kogo.Rubare(Perdita(selectedFriend));
                 BalanceControll(selectedFriend);
+                //System.out.println("Dopo "+selectedFriend.getBalance());
             } else {
                 System.out.println("Nessun amico trovato per il nome selezionato.");
             }
@@ -113,7 +113,7 @@ public class MainFrameController {
 
     @FXML
     void SaveButtonListener(ActionEvent event) {
-
+    SaveOnFile();
     }
 
     @FXML
@@ -127,28 +127,24 @@ public class MainFrameController {
         System.out.println("ComboBoxListener attivato! Selezione: " + FriendsBox.getSelectionModel().getSelectedItem());
 
         if (FriendsBox.getItems().isEmpty()) {
-            AddItems(FriendsBox);
+            System.out.println("IsEmpty");
             ArrayFriends();
+            AddItems(FriendsBox);
         }
 
         // Get the selected item
         int i =FriendsBox.getItems().size();
         System.out.println("Size: "+ i);
-        System.out.println("Selected :"+FriendsBox.getSelectionModel().getSelectedIndex());
-        System.out.println("Amico Sel: " +FriendsBox.getSelectionModel().getSelectedItem());
+       // System.out.println("Selected :"+FriendsBox.getSelectionModel().getSelectedIndex());
+        //System.out.println("Amico Sel: " +FriendsBox.getSelectionModel().getSelectedItem());
 
         //controlla se si seleziona aggiungi e solo in quel caso fa fare il inserimento
         if( FriendsBox.getSelectionModel().getSelectedItem().equals("Aggiungi")) {
             InputDialogFriend("Aggiungi Amico", "Nome Cognome", "Nome: ");
-            FriendsBox.setDisable(true); // Disattiva il listener momentaneamente
-            AddItems(FriendsBox);
+            FriendsBox.setDisable(true); // **Disabilita temporaneamente il listener**
             ArrayFriends();
+            AddItems(FriendsBox);
             FriendsBox.setDisable(false);
-            /*System.out.println("Elementi nella ComboBox:");
-            for (String item : FriendsBox.getItems()) {
-                System.out.println(item);
-            }
-            */
             //Platform.runLater(() -> FriendsBox.getSelectionModel().clearSelection());
         }
     }
@@ -224,41 +220,31 @@ public class MainFrameController {
             }
         }
         br.close();
-        // **Verifichiamo se tutti gli amici sono stati caricati**
-        System.out.println("Amici caricati: " + friendArrayList.size());
-        for (Friend f : friendArrayList) {
-            System.out.println(f.getName() + " " + f.getSurname() + " - Balance: " + f.getBalance());
-        }
     }
 
 
 
     public void AddItems(ComboBox<String> cb) {
-        try {
-            if (names == null) {
-                names = FXCollections.observableArrayList();
-            }
-            names.clear();
+        if (names == null) {
+            names = FXCollections.observableArrayList();
+        }
+        names.clear();
 
-            List<String> retrievedNames = Friend.getNames();
-            if (retrievedNames != null) {
-                names.addAll(retrievedNames);
-            }
-            names.add("Aggiungi");
+        for(Friend a : friendArrayList){
+            names.add(a.getName()+ " " +a.getSurname());
+        }
+        names.add("Aggiungi");
 
-            // Salva la selezione attuale
-            String selected = cb.getSelectionModel().getSelectedItem();
+        // Salva la selezione attuale
+        String selected = cb.getSelectionModel().getSelectedItem();
 
-            cb.getItems().setAll(names); // Usa `setAll` invece di `clear` + `addAll`
+        cb.getItems().setAll(names); // Usa `setAll` invece di `clear` + `addAll`
 
-            // Ripristina la selezione attuale se ancora presente
-            if (names.contains(selected)) {
-                cb.getSelectionModel().select(selected);
-            } else {
-                cb.getSelectionModel().clearSelection();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
+        // Ripristina la selezione attuale se ancora presente
+        if (names.contains(selected)) {
+            cb.getSelectionModel().select(selected);
+        } else {
+            cb.getSelectionModel().clearSelection();
         }
     }
 
@@ -290,7 +276,7 @@ public class MainFrameController {
             Name=str.substring(0, space1);
             Surname=str.substring(space1).trim();
             Friend a = new Friend(Name,Surname);
-            a.AddToFile(a,true);
+            Friend.AddToFile(a,true);
             friendArrayList.add(a);
             String message =a.getName()+" "+a.getSurname()+"\n E interessato a: " + a.getHobby();
             ShowInfo("Amico", message);
@@ -316,7 +302,7 @@ public class MainFrameController {
         for (Friend a : friendArrayList) {
             String fullName = a.getName() + " " + a.getSurname();
             System.out.println();
-            a.ToStampa();
+            //a.ToStampa();
             if (fullName.equals(nomeCompleto)) {
                 return a;
             }
@@ -326,13 +312,49 @@ public class MainFrameController {
 
     //Controls the balance of the friend and does the delete or the update of the friend on file
     public void BalanceControll(Friend a) throws IOException {
-        if(a.getBalance()>0)
-            a.Update(a);
-        else{
-            friendArrayList.remove(a);
-            a.DeleteFromFile(a);
-            AddItems(FriendsBox);
+        if(a.getBalance()<=0){
+           friendArrayList.remove(a);
+           Friend.DeleteFromFile(a);
+           AddItems(FriendsBox);
         }
     }
 
+    public void SaveOnFile(){
+        try(
+                BufferedReader br = new BufferedReader(new FileReader(saves));
+                FileWriter fil = new FileWriter("saves.csv",true);
+                BufferedWriter bf = new BufferedWriter(fil);
+                PrintWriter wr = new PrintWriter(bf);)  {
+            if(!saves.exists()) {
+                saves.createNewFile();
+            }
+            StringBuilder save = new StringBuilder(DateLabel.getText() + ",");
+            save.append(df.format(kogo.getMoney()).replace(",", ".")).append(",");
+            save.append(df.format(kogo.getStolen_money()).replace(",", "."));
+
+
+            for(Friend a : friendArrayList){
+                save.append(",").append(a.getName()).append(",");
+                save.append(a.getSurname().trim()).append(",");
+                save.append(a.getSex()).append(",");
+                save.append(a.getHobby()).append(",");
+                save.append(String.format("%.2f", a.getBalance()));
+            }
+            wr.printf(save+"\n");
+
+        System.out.println("Dati Salvati");
+        }catch (Exception e) {
+            System.out.println("dio porco"  + e);
+        }
     }
+
+    void UpdateFile(){
+        try {
+            Friend.Update(friendArrayList);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+}
